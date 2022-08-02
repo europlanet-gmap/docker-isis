@@ -18,6 +18,9 @@ RUN apt-get update && \
                           vim \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \
+    && pip3 --no-cache-dir install 	\
+       rio-cogeo \
+    && rm -rf /var/lib/apt/lists/* \
     && mamba install -c conda-forge \
                           fiona \
                           geopandas \
@@ -34,4 +37,5 @@ RUN apt-get update && \
                           scikit-image \
                           scipy \
                           shapely \
-                          spectral
+                          spectral && \
+                          conda clean -a
