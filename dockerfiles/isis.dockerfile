@@ -86,6 +86,36 @@ RUN DOC="${HOME}/README.md" && \
     echo '-----'                                                                    >> $DOC && \
     echo "> This container is based on '${BASE_IMAGE}' ([jupyter/docker-stacks][])" >> $DOC
 
+
+RUN source activate isis                     && \
+    mamba install -c conda-forge 				\
+				fiona 							\
+				geopandas 						\
+				geoplot 						\
+				geoviews 						\
+				holoviews 						\
+				hvplot 							\
+				ipywidgets						\
+				kalasiris 						\
+				matplotlib 						\
+				owslib 							\
+				numpy 							\
+				plotly 							\
+				pygeos 							\
+				rasterio 						\
+				rioxarray 						\
+				scikit-image					\
+				scikit-learn					\
+				scipy 							\
+				shapely 						\
+				spectral					 	\
+				tqdm						 && \
+	conda clean -a							 && \
+	pip install -y                              \
+        asap_stereo                             \
+        pds4-tools                              \
+        rio-cogeo
+
 # # If WORK_DIR is not defined (when notebook/user is started), use (~) Home.
 # RUN echo 'conda config --add envs_dirs ${WORK_DIR:-~}/.conda/envs 2> /dev/null' \
 #       >> $HOME/.bashrc
