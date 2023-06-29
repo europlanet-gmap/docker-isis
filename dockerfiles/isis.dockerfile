@@ -3,7 +3,7 @@ FROM $BASE_IMAGE
 
 ARG JUPYTERHUB_VERSION="3.0.0"
 RUN python -m pip install --no-cache jupyterhub==$JUPYTERHUB_VERSION    && \
-    echo "jupyterhub $(jupyterhub --version)" >> $CONDA_DIR/conda-meta/pinned 
+    echo "jupyterhub $(jupyterhub --version)" >> $CONDA_DIR/conda-meta/pinned
 
 # This lines above are necessary to guarantee a smooth coupling JupyterHub.
 # -------------------------------------------------------------------------
@@ -31,9 +31,19 @@ RUN conda config --add channels conda-forge                     && \
     conda config --set use_only_tar_bz2 true                    && \
     conda config --set notify_outdated_conda false              && \
     conda config --set always_yes true                          && \
+    #
+    ## conda-update may not be necessary, and can mess up things.
+    ## for instance, https://github.com/conda/conda/issues/10887,
+    ## guarantee 'pip' will be there after updating.
     # conda update conda                                          && \
     # conda install pip                                           && \
+    #
+    ## "nb-conda-kernels" doesn't seem to work (as I expected).
+    ## There is a discussion about managing kernels/nb_conda_kernels
+    ## in: https://github.com/jupyter-server/jupyter_server/pull/112.
+    ## In short, nb_conda_kernels used to work well, but is outdated.
     # conda install nb_conda_kernels                              && \
+    #
     conda config --add create_default_packages ipykernel        && \
     conda config --add create_default_packages pip              && \
     conda config --add create_default_packages sh               && \
@@ -42,8 +52,10 @@ RUN conda config --add channels conda-forge                     && \
 ARG ISIS_VERSION="7.1.0"
 ARG ASP_VERSION="3.2.0"
 
-RUN conda create -n isis python=3.9                                 && \
-    source activate isis                                            && \
+RUN conda create -n isis python=3.9
+
+RUN source activate isis                                            && \
+    ## Add USGS/AMES channels just for this (isis) environment
     conda config --env --prepend channels usgs-astrogeology         && \
     conda config --env --prepend channels nasa-ames-stereo-pipeline && \
     conda config --append channels default                          && \
@@ -52,7 +64,6 @@ RUN conda create -n isis python=3.9                                 && \
     conda clean -a
 
 RUN source activate isis                                    && \
-    # pip install ipykernel                                   && \
     python -m ipykernel install --user --name 'ISIS'
 
 ARG ISISDATA="/isis/data"
@@ -98,23 +109,18 @@ RUN DOC="${HOME}/README.md" && \
     echo "> This container is based on '${BASE_IMAGE}' ([jupyter/docker-stacks][])" >> $DOC
 
 
-RUN conda create -n gispy -c conda-forge -y python=3.10
-
-RUN source activate gispy                   && \
-    conda install -y                        \
-                geopandas                   \
-                rasterio                    \
-                spectral                    && \
-    conda clean -a
-
-RUN	source activate gispy                   && \
-    pip install -y                          \
-                ipywidgets                  \
-                matplotlib                  \
+RUN conda create -n gispy -c conda-forge -y python=3.10     && \
+    source activate gispy                                   && \
+    conda install -y                                        \
+                geopandas                                   \
+                rasterio                                    \
+                spectral                                    && \
+    python -m pip install -y                                \
+                ipywidgets                                  \
+                matplotlib                                  \
                 tqdm
 
 RUN source activate gispy                                   && \
-#     pip install ipykernel                                   && \
     python -m ipykernel install --user --name 'GISPy'
 
 # RUN source activate gispy                     && \
