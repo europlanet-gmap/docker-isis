@@ -1,0 +1,28 @@
+version: "3.8"
+services:
+
+  gispy:
+    build:
+      context: dockerfiles/.
+      dockerfile: gispy.dockerfile
+      args:
+        BASE_IMAGE: $BASE_IMAGE
+    image: jupyter-gispy
+
+  isis:
+    build:
+      context: dockerfiles/.
+      dockerfile: isis.dockerfile
+      args:
+        BASE_IMAGE: $BASE_IMAGE
+        ISIS_VERSION: $ISIS_VERSION
+    image: jupyter-isis
+  
+  asp:
+    build:
+      context: dockerfiles/.
+      dockerfile: isis-asp.dockerfile
+      args:
+        BASE_IMAGE: jupyter-isis
+        ASP_IMAGE: $ASP_IMAGE
+    image: jupyter-isis-asp
