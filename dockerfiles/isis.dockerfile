@@ -27,10 +27,11 @@ RUN apt-get update -y                           && \
     apt-get autoremove
 USER $NB_UID
 
-RUN conda config --add channels conda-forge                     && \
+RUN conda config --append channels default                      && \
+    conda config --prepend channels conda-forge                 && \
+    conda config --set always_yes true                          && \
     conda config --set use_only_tar_bz2 true                    && \
     conda config --set notify_outdated_conda false              && \
-    conda config --set always_yes true                          && \
     #
     ## conda-update may not be necessary, and can mess up things.
     ## for instance, https://github.com/conda/conda/issues/10887,
@@ -57,10 +58,9 @@ RUN conda create -n isis python=3.9
 RUN source activate isis                                            && \
     ## Add USGS/AMES channels just for this (isis) environment
     conda config --env --prepend channels usgs-astrogeology         && \
-    conda config --env --prepend channels nasa-ames-stereo-pipeline && \
-    conda config --append channels default                          && \
-    mamba install stereo-pipeline=${ASP_VERSION}                    && \
-    mamba install -c usgs-astrogeology isis=${ISIS_VERSION}         && \
+    mamba install isis=${ISIS_VERSION}                              && \
+    # conda config --env --prepend channels nasa-ames-stereo-pipeline && \
+    # mamba install stereo-pipeline=${ASP_VERSION}                    && \
     conda clean -a
 
 RUN source activate isis                                    && \
