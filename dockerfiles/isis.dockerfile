@@ -2,7 +2,8 @@ ARG BASE_IMAGE="jupyter/minimal-notebook:latest"
 FROM $BASE_IMAGE
 
 ARG JUPYTERHUB_VERSION="3.0.0"
-RUN python3 -m pip install --no-cache jupyterhub==$JUPYTERHUB_VERSION
+RUN python -m pip install --no-cache jupyterhub==$JUPYTERHUB_VERSION    && \
+    echo "jupyterhub $(jupyterhub --version)" >> $CONDA_DIR/conda-meta/pinned 
 
 # This lines above are necessary to guarantee a smooth coupling JupyterHub.
 # -------------------------------------------------------------------------
@@ -12,36 +13,46 @@ ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 USER root
 RUN apt-get update -y                           && \
     apt-get install -y --no-install-recommends  \
-        bzip2           						\
-        ca-certificates 						\
-        curl            						\
-        git             						\
-        libgl1-mesa-glx 						\
-        libjpeg9        						\
-        libjpeg9-dev    						\
-        rsync           						\
-        wget            						\
-        vim             					    && \
+        bzip2                                   \
+        ca-certificates                         \
+        curl                                    \
+        git                                     \
+        libgl1-mesa-glx                         \
+        libjpeg9                                \
+        libjpeg9-dev                            \
+        rsync                                   \
+        wget                                    \
+        vim                                     && \
     rm -rf /var/lib/apt/lists/*                 && \
     apt-get autoremove
 USER $NB_UID
 
+RUN conda config --add channels conda-forge                     && \
+    conda config --set use_only_tar_bz2 true                    && \
+    conda config --set notify_outdated_conda false              && \
+    conda config --set always_yes true                          && \
+    # conda update conda                                          && \
+    # conda install pip                                           && \
+    # conda install nb_conda_kernels                              && \
+    conda config --add create_default_packages ipykernel        && \
+    conda config --add create_default_packages pip              && \
+    conda config --add create_default_packages sh               && \
+    conda clean -a
+
 ARG ISIS_VERSION="7.1.0"
 ARG ASP_VERSION="3.2.0"
 
-RUN conda create -n isis -c conda-forge -y python=3.9
-
-RUN source activate isis                                            && \
-    conda config --add channels conda-forge                         && \
+RUN conda create -n isis python=3.9                                 && \
+    source activate isis                                            && \
     conda config --env --prepend channels usgs-astrogeology         && \
     conda config --env --prepend channels nasa-ames-stereo-pipeline && \
     conda config --append channels default                          && \
     mamba install stereo-pipeline=${ASP_VERSION}                    && \
-    mamba install -c usgs-astrogeology -y isis=${ISIS_VERSION}      && \
+    mamba install -c usgs-astrogeology isis=${ISIS_VERSION}         && \
     conda clean -a
 
 RUN source activate isis                                    && \
-    pip install ipykernel                                   && \
+    # pip install ipykernel                                   && \
     python -m ipykernel install --user --name 'ISIS'
 
 ARG ISISDATA="/isis/data"
@@ -87,34 +98,41 @@ RUN DOC="${HOME}/README.md" && \
     echo "> This container is based on '${BASE_IMAGE}' ([jupyter/docker-stacks][])" >> $DOC
 
 
-RUN source activate isis                     && \
-    mamba install -c conda-forge 				\
-				fiona 							\
-				geopandas 						\
-				geoplot 						\
-				geoviews 						\
-				holoviews 						\
-				hvplot 							\
-				ipywidgets						\
-				kalasiris 						\
-				matplotlib 						\
-				owslib 							\
-				numpy 							\
-				plotly 							\
-				pygeos 							\
-				rasterio 						\
-				rioxarray 						\
-				scikit-image					\
-				scikit-learn					\
-				scipy 							\
-				shapely 						\
-				spectral					 	\
-				tqdm						 && \
-	conda clean -a							 && \
-	pip install -y                              \
-        asap_stereo                             \
-        pds4-tools                              \
-        rio-cogeo
+RUN conda create -n gispy -c conda-forge -y python=3.10
+
+RUN source activate gispy                   && \
+    conda install -y                        \
+                geopandas                   \
+                rasterio                    \
+                spectral                    && \
+    conda clean -a
+
+RUN	source activate gispy                   && \
+    pip install -y                          \
+                ipywidgets                  \
+                matplotlib                  \
+                tqdm
+
+RUN source activate gispy                                   && \
+#     pip install ipykernel                                   && \
+    python -m ipykernel install --user --name 'GISPy'
+
+# RUN source activate gispy                     && \
+# 	pip install -y                              \
+#         asap_stereo                             \
+#         pds4-tools                              \
+#         rio-cogeo
+
+# Install jupyter-cache in the base environment
+RUN pip install jupyter-cache
+
+# Install basic geo data hangling/visualization libraries
+RUN source activate isis            && \
+    mamba install -c conda-forge    \
+        matplotlib                  \
+        geopandas                   \
+        rasterio                    && \
+    conda clean -a
 
 # # If WORK_DIR is not defined (when notebook/user is started), use (~) Home.
 # RUN echo 'conda config --add envs_dirs ${WORK_DIR:-~}/.conda/envs 2> /dev/null' \
