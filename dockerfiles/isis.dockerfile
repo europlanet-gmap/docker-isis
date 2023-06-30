@@ -1,9 +1,9 @@
-ARG BASE_IMAGE="jupyter/minimal-notebook:latest"
+ARG BASE_IMAGE="jupyter/scipy-notebook:latest"
 FROM $BASE_IMAGE
 
-ARG JUPYTERHUB_VERSION="3.0.0"
-RUN python -m pip install --no-cache jupyterhub==$JUPYTERHUB_VERSION    && \
-    echo "jupyterhub $(jupyterhub --version)" >> $CONDA_DIR/conda-meta/pinned
+# ARG JUPYTERHUB_VERSION="3.0.0"
+# RUN python -m pip install --no-cache jupyterhub==$JUPYTERHUB_VERSION    && \
+#     echo "jupyterhub $(jupyterhub --version)" >> $CONDA_DIR/conda-meta/pinned
 
 # This lines above are necessary to guarantee a smooth coupling JupyterHub.
 # -------------------------------------------------------------------------
@@ -27,9 +27,38 @@ RUN apt-get update -y                           && \
     apt-get autoremove
 USER $NB_UID
 
-RUN conda config --append channels default                      && \
-    conda config --prepend channels conda-forge                 && \
-    conda config --set always_yes true                          && \
+COPY isis.yml /tmp/isis.yml
+RUN mamba env create --name isis --file /tmp/isis.yml   && \
+    mamba clean -a
+
+# ARG ISIS_VERSION="7.1.0"
+# ARG ASP_VERSION="3.2.0"
+#
+# RUN conda create -n isis python=3.9
+#
+# RUN source activate isis                                            && \
+#     ## Add USGS/AMES channels just for this (isis) environment
+#     conda config --env --prepend channels usgs-astrogeology         && \
+#     mamba install isis=${ISIS_VERSION}                              && \
+#     # conda config --env --prepend channels nasa-ames-stereo-pipeline && \
+#     # mamba install stereo-pipeline=${ASP_VERSION}                    && \
+#     conda clean -a
+#
+# RUN source activate isis                                    && \
+#     python -m ipykernel install --user --name 'ISIS'
+
+ARG ISISDATA="/isis/data"
+ARG ISISTESTDATA="/isis/testdata"
+
+ENV ISISDATA=${ISISDATA}
+ENV ISISTESTDATA=${ISISTESTDATA}
+
+ENV ISISROOT="/opt/conda/envs/isis"
+
+RUN echo 'source activate isis' >> ~/.bashrc                        && \
+    echo 'export PATH="${HOME}/.local/bin:${PATH}"' >> ~/.bashrc
+
+RUN conda config --set always_yes true                          && \
     conda config --set use_only_tar_bz2 true                    && \
     conda config --set notify_outdated_conda false              && \
     #
@@ -49,33 +78,6 @@ RUN conda config --append channels default                      && \
     conda config --add create_default_packages pip              && \
     conda config --add create_default_packages sh               && \
     conda clean -a
-
-ARG ISIS_VERSION="7.1.0"
-# ARG ASP_VERSION="3.2.0"
-
-RUN conda create -n isis python=3.9
-
-RUN source activate isis                                            && \
-    ## Add USGS/AMES channels just for this (isis) environment
-    conda config --env --prepend channels usgs-astrogeology         && \
-    mamba install isis=${ISIS_VERSION}                              && \
-    # conda config --env --prepend channels nasa-ames-stereo-pipeline && \
-    # mamba install stereo-pipeline=${ASP_VERSION}                    && \
-    conda clean -a
-
-RUN source activate isis                                    && \
-    python -m ipykernel install --user --name 'ISIS'
-
-ARG ISISDATA="/isis/data"
-ARG ISISTESTDATA="/isis/testdata"
-
-ENV ISISDATA=${ISISDATA}
-ENV ISISTESTDATA=${ISISTESTDATA}
-
-ENV ISISROOT="/opt/conda/envs/isis"
-
-RUN echo 'source activate isis' >> ~/.bashrc                        && \
-    echo 'export PATH="${HOME}/.local/bin:${PATH}"' >> ~/.bashrc
 
 # RUN DOC="${HOME}/README.md" && \
 #     source activate isis                                                && \
@@ -108,43 +110,17 @@ RUN echo 'source activate isis' >> ~/.bashrc                        && \
 #     echo '-----'                                                                    >> $DOC && \
 #     echo "> This container is based on '${BASE_IMAGE}' ([jupyter/docker-stacks][])" >> $DOC
 
+COPY gispy.txt /tmp/gispy.txt 
+RUN mambda install -y --file /tmp/gispy.txt     && \
+    mamba clean -a
+ENV USE_PYGEOS=0
 
-# # Install basic geo data hangling/visualization libraries
-# RUN source activate isis            && \
-#     mamba install                   \
-#         matplotlib                  \
-#         gdal                        \
-#         geopandas                   \
-#         rasterio                    && \
-#     conda clean -a
+RUN source activate isis    && \
+    source activate --stack base && \
+    python -m ipykernel install --user --env PATH $PATH 
 
-# RUN conda create -n gispy -c conda-forge -y python=3.10
-
-# RUN source activate gispy                                   && \
-#     conda install -y                                        \
-#                 gdal                                        \
-#                 geopandas                                   \
-#                 rasterio                                    \
-#                 spectral                                    && \
-#     conda clean -a
-
-# RUN source activate gispy                                   && \
-#     python -m pip install -y                                \
-#                 ipywidgets                                  \
-#                 matplotlib                                  \
-#                 tqdm
-
-# RUN source activate gispy                                   && \
-#     python -m ipykernel install --user --name 'GISPy'
-
-# # RUN source activate gispy                     && \
-# # 	pip install -y                              \
-# #         asap_stereo                             \
-# #         pds4-tools                              \
-# #         rio-cogeo
-
-# # Install jupyter-cache in the base environment
-# RUN pip install jupyter-cache
+# Install jupyter-cache in the base environment
+RUN python -m pip install jupyter-cache
 
 # # # If WORK_DIR is not defined (when notebook/user is started), use (~) Home.
 # # RUN echo 'conda config --add envs_dirs ${WORK_DIR:-~}/.conda/envs 2> /dev/null' \
