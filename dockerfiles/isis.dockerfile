@@ -111,7 +111,7 @@ RUN conda config --set always_yes true                          && \
 #     echo "> This container is based on '${BASE_IMAGE}' ([jupyter/docker-stacks][])" >> $DOC
 
 COPY gispy.txt /tmp/gispy.txt 
-RUN mambda install -y --file /tmp/gispy.txt     && \
+RUN mamba install -y --file /tmp/gispy.txt     && \
     mamba clean -a
 ENV USE_PYGEOS=0
 
