@@ -1,0 +1,9 @@
+fiona
+gdal
+geoviews
+geopandas
+holoviews
+panel
+requests
+rasterio
+shapely
