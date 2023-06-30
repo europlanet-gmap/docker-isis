@@ -31,4 +31,7 @@ RUN mamba install -y --file /tmp/gispy.txt      && \
     mamba clean -a
 ENV USE_PYGEOS=0
 
+# Install jupyter-cache in the base environment
+RUN python -m pip install jupyter-cache
+
 # COPY etc/jupyterlab/user_settings.json /opt/conda/share/jupyter/lab/settings/overrides.json
