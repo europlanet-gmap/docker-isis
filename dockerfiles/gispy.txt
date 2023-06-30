@@ -6,4 +6,5 @@ holoviews
 panel
 requests
 rasterio
+sh
 shapely
