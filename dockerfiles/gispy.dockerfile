@@ -1,4 +1,4 @@
-ARG BASE_IMAGE="jupyter/minimal-notebook:latest"
+ARG BASE_IMAGE="jupyter/scipy-notebook:latest"
 FROM $BASE_IMAGE
 
 # ARG JUPYTERHUB_VERSION="3.0.0"
@@ -27,38 +27,8 @@ RUN apt-get update -y                           && \
 USER $NB_UID
 
 COPY gispy.txt /tmp/gispy.txt 
-
-RUN mambda install -y --file /tmp/gispy.txt
-
-# RUN	conda install gdal -y -c conda-forge && \
-#     conda clean -a
-
-# RUN python -m pip install           \
-#                 geoplot             \
-#                 geoviews            \
-#                 holoviews           \
-#                 hvplot              \
-#                 ipywidgets          \
-#                 plotly              \
-#                 tqdm                \
-#                 # owslib              \
-#                 # pygeos              \
-#                 fiona               \	
-#                 geopandas           \
-#                 matplotlib          \
-#                 numpy               \
-#                 rasterio            \
-#                 rioxarray           \
-#                 scikit-image        \
-#                 scipy               \
-#                 shapely             \
-#                 spectral
-    # pip install -y asap_stereo					 	\
-    #     kalasiris         \
-    #     pds4-tools									\
-    #     rio-cogeo									\
-    #     https://github.com/chbrandt/gpt/archive/refs/tags/v0.3dev.zip  
-
+RUN mamba install -y --file /tmp/gispy.txt      && \
+    mamba clean -a
 ENV USE_PYGEOS=0
 
 # COPY etc/jupyterlab/user_settings.json /opt/conda/share/jupyter/lab/settings/overrides.json
