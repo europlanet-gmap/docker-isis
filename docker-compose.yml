@@ -7,7 +7,7 @@ services:
       dockerfile: gispy.dockerfile
       args:
         BASE_IMAGE: $BASE_IMAGE
-    image: jupyter-gispy
+    image: jupyter-gispy:${TAG:-test}
 
   isis:
     build:
@@ -15,8 +15,8 @@ services:
       dockerfile: isis.dockerfile
       args:
         BASE_IMAGE: $BASE_IMAGE
-        ISIS_VERSION: $ISIS_VERSION
-    image: jupyter-isis
+        # ISIS_VERSION: $ISIS_VERSION
+    image: jupyter-isis:${TAG:-test}
   
   asp:
     build:
@@ -24,5 +24,5 @@ services:
       dockerfile: isis-asp.dockerfile
       args:
         BASE_IMAGE: jupyter-isis
-        ASP_VERSION: $ASP_VERSION
-    image: jupyter-isis-asp
+        # ASP_VERSION: $ASP_VERSION
+    image: jupyter-isis-asp:${TAG:-test}
