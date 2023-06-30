@@ -6,23 +6,23 @@ services:
       context: dockerfiles/.
       dockerfile: gispy.dockerfile
       args:
-        BASE_IMAGE: $BASE_IMAGE
-    image: jupyter-gispy:${TAG:-test}
+        BASE_IMAGE: $GISPY_BASE_IMAGE
+    image: $GISPY_NEW_IMAGE
 
   isis:
     build:
       context: dockerfiles/.
       dockerfile: isis.dockerfile
       args:
-        BASE_IMAGE: $BASE_IMAGE
+        BASE_IMAGE: $ISIS_BASE_IMAGE
         # ISIS_VERSION: $ISIS_VERSION
-    image: jupyter-isis:${TAG:-test}
+    image: $ISIS_NEW_IMAGE
   
   asp:
     build:
       context: dockerfiles/.
       dockerfile: isis-asp.dockerfile
       args:
-        BASE_IMAGE: jupyter-isis
+        BASE_IMAGE: ${ASP_BASE_IMAGE}
         # ASP_VERSION: $ASP_VERSION
-    image: jupyter-isis-asp:${TAG:-test}
+    image: $ASP_NEW_IMAGE
