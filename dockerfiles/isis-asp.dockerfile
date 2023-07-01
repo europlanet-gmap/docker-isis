@@ -1,13 +1,42 @@
 ARG BASE_IMAGE="gmap/jupyter-isis:latest"
 FROM $BASE_IMAGE
 
-ARG ASP_VERSION="3.2.0"
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
-RUN source activate isis                                            && \
-    ## Add USGS/AMES channels just for this (isis) environment
-    conda config --env --prepend channels nasa-ames-stereo-pipeline && \
-    mamba install stereo-pipeline=${ASP_VERSION}                    && \
+USER root
+RUN [ -n "${BASE_IMAGE##*isis*}" ]                  && \
+    apt-get update -y                               && \
+    apt-get install -y --no-install-recommends      \
+        bzip2                                       \
+        ca-certificates                             \
+        curl                                        \
+        git                                         \
+        libgl1-mesa-glx                             \
+        libjpeg9                                    \
+        libjpeg9-dev                                \
+        rsync                                       \
+        wget                                        \
+        vim                                         && \
+    rm -rf /var/lib/apt/lists/*                     && \
+    apt-get autoremove                              || \ 
+    echo "Nothing apt-installed, base 'isis' image already did it."
+USER $NB_UID
+
+ARG ASP_VERSION=""
+
+COPY asp.txt /tmp/asp.tmp
+
+RUN [ -n "${ASP_VERSION}" ]                                             && \
+    sed "s/\(.*stereo-pipeline\).*/\1=$ASP_VERSION/" /tmp/asp.tmp       \
+        > /tmp/asp.txt                                                  || \
+    cp /tmp/asp.tmp /tmp/asp.txt
+
+RUN source activate isis                    && \
+    mamba install --file /tmp/asp.txt       && \
     conda clean -a
+
+# RUN source activate isis                                    && \
+#     python -m ipykernel install --user --name 'ISIS-ASP'
 
 RUN DOC="${HOME}/README.md"                                     && \
     echo '# AMES Stereo Pipeline'                       >> $DOC && \

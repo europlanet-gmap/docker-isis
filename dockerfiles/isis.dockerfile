@@ -27,11 +27,23 @@ RUN apt-get update -y                           && \
     apt-get autoremove
 USER $NB_UID
 
-COPY isis.yml /tmp/isis.yml
+ARG ISIS_VERSION=""
+
+COPY isis.yml /tmp/isis.tmp
+
+RUN [ -n "${ISIS_VERSION}" ]                                                && \
+    sed "s/\(.*- isis\).*/\1=$ISIS_VERSION/" /tmp/isis.tmp > /tmp/isis.yml  || \
+    cp /tmp/isis.tmp /tmp/isis.yml
+
 RUN mamba env create --name isis --file /tmp/isis.yml   && \
     mamba clean -a
 
-# ARG ISIS_VERSION="7.1.0"
+# Stack 'base' on top of 'isis' to get its PATH.
+# Then, update the default/base kernel to include PATH from 'isis'
+RUN source activate isis                                        && \
+    source activate --stack base                                && \
+    python -m ipykernel install --user --env PATH $PATH 
+
 # ARG ASP_VERSION="3.2.0"
 #
 # RUN conda create -n isis python=3.9
@@ -110,17 +122,10 @@ RUN conda config --set always_yes true                          && \
 #     echo '-----'                                                                    >> $DOC && \
 #     echo "> This container is based on '${BASE_IMAGE}' ([jupyter/docker-stacks][])" >> $DOC
 
-COPY gispy.txt /tmp/gispy.txt 
-RUN mamba install -y --file /tmp/gispy.txt     && \
-    mamba clean -a
-ENV USE_PYGEOS=0
-
-RUN source activate isis    && \
-    source activate --stack base && \
-    python -m ipykernel install --user --env PATH $PATH 
-
-# Install jupyter-cache in the base environment
-RUN python -m pip install jupyter-cache
+# COPY gispy.txt /tmp/gispy.txt 
+# RUN mamba install -y --file /tmp/gispy.txt     && \
+#     mamba clean -a
+# ENV USE_PYGEOS=0
 
 # # # If WORK_DIR is not defined (when notebook/user is started), use (~) Home.
 # # RUN echo 'conda config --add envs_dirs ${WORK_DIR:-~}/.conda/envs 2> /dev/null' \

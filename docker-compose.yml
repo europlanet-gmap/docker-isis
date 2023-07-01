@@ -15,7 +15,7 @@ services:
       dockerfile: isis.dockerfile
       args:
         BASE_IMAGE: $ISIS_BASE_IMAGE
-        # ISIS_VERSION: $ISIS_VERSION
+        ISIS_VERSION: $ISIS_VERSION
     image: $ISIS_NEW_IMAGE
   
   asp:
@@ -24,5 +24,5 @@ services:
       dockerfile: isis-asp.dockerfile
       args:
         BASE_IMAGE: ${ASP_BASE_IMAGE}
-        # ASP_VERSION: $ASP_VERSION
+        ASP_VERSION: $ASP_VERSION
     image: $ASP_NEW_IMAGE
