@@ -70,8 +70,7 @@ RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> /home/$NB_USER/.bashrc &&
 ENV PATH /opt/conda/envs/${ENV_NAME}/bin:$PATH
 
 # Ensure the new kernel is available in Jupyter
-RUN jupyter kernelspec list && \
-    jupyter kernelspec uninstall $ASP_ENV_NAME -y
+RUN jupyter kernelspec list
 # Set Environmental Variables for ISIS DATA
 ARG ISISDATA="/isis/data"
 ARG ISISTESTDATA="/isis/testdata"
