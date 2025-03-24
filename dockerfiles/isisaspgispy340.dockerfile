@@ -51,18 +51,29 @@ COPY gispy.txt /tmp/gispy.txt
 
 # Use mamba to update the base environment with all packages in environment.yml
 RUN mamba create -n ${ENV_NAME} -y && \
-    source activate  ${ENV_NAME} && \
+    source activate ${ENV_NAME} && \
     mamba install -y --file /tmp/gispy.txt && \
-    source deactivate  ${ENV_NAME} && \
-    conda rename -n gispy  ${ISISASP_GISPY_ENV_NAME} && \
-    source activate  ${ISIS_ENV_NAME} && \
-    source activate --stack ${ISISASP_GISPY_ENV_NAME} && \    
+    source deactivate ${ENV_NAME} && \
+    conda rename -n gispy ${ISISASP_GISPY_ENV_NAME} && \
+    source activate ${ISIS_ENV_NAME} && \
+    source activate --stack ${ISISASP_GISPY_ENV_NAME} && \
     pip install ipykernel && \
     python -m ipykernel install --user --name ${ISISASP_GISPY_ENV_NAME} --display-name ${ISISASP_GISPY_ENV_NAME} && \
-    mamba clean -a
+    mamba clean -a && \
+    rm -f /opt/conda/envs/gispy/bin/stereo || true
 
+    
+RUN wget -O /tmp/StereoPipeline-3.4.0-2024-06-19-x86_64-Linux.tar.bz2 "https://github.com/NeoGeographyToolkit/StereoPipeline/releases/download/3.4.0/StereoPipeline-3.4.0-2024-06-19-x86_64-Linux.tar.bz2"
+RUN mkdir ~/.stereo/ && \
+    tar xvf /tmp/StereoPipeline-3.4.0-2024-06-19-x86_64-Linux.tar.bz2 -C ~/.stereo/ && \
+    # Optionally remove the tarball to save space
+    rm /tmp/StereoPipeline-3.4.0-2024-06-19-x86_64-Linux.tar.bz2 && \
+    # Verify the installation by running the help command
+    ~/.stereo/StereoPipeline-3.4.0-2024-06-19-x86_64-Linux/bin/stereo --help    
 # Update the .bashrc so that any interactive shell activates the stacked environments:
+
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> /home/$NB_USER/.bashrc && \
+    echo "export PATH=/home/$NB_USER/.stereo/StereoPipeline-3.4.0-2024-06-19-x86_64-Linux/bin:\${PATH}" >> /home/$NB_USER/.bashrc && \
     echo "conda activate ${ISIS_ENV_NAME} && conda activate --stack ${ISISASP_GISPY_ENV_NAME}" >> /home/$NB_USER/.bashrc && \
     sed -i '/conda activate gispy/d' /home/$NB_USER/.bashrc
 
@@ -72,6 +83,7 @@ ENV PATH /opt/conda/envs/${ENV_NAME}/bin:$PATH
 # Ensure the new kernel is available in Jupyter
 RUN jupyter kernelspec list && \
     jupyter kernelspec uninstall $ASP_ENV_NAME -y
+
 # Set Environmental Variables for ISIS DATA
 ARG ISISDATA="/isis/data"
 ARG ISISTESTDATA="/isis/testdata"
