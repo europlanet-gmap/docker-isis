@@ -22,21 +22,23 @@ The (Docker) image recipes we provide here are:
 - `gispy`: Jupyter-Lab for Geographical (GIS) data analysis with Python
 - `isis`: Jupyter-Lab server with USGS/ISIS installed
 - `isis-asp`: Extension of `isis` with AMES Stereo Pipeline installed
+- `isis-asp-gispy`: Extension of `isis-asp` with GISPY stacked environment
 
 Ready-for-use images can be downloaded from GMAP repository in DockerHub:
 
 - `gmap/jupyter-gispy`: latest build of `gispy.dockerfile`
 - `gmap/jupyter-isis`: latest build of `isis.dockerfile`
 - `gmap/jupyter-isis-asp`: latest build of `isis-asp.dockerfile`
+- `gmap/jupyter-isis-asp-gispy`: latest build of `isis-asp-gispy.dockerfile`
 
 Images tree:
 
     |---------|     ---------
     | Jupyter | --> | gispy |
     | Docker  |     ---------
-    | Stacks  |     ---------     ------------
-    | images  | --> | isis  | --> | isis-asp |
-    |---------|     ---------     ------------
+    | Stacks  |     ---------     ------------     ------------------
+    | images  | --> | isis  | --> | isis-asp | --> | isis-asp-gispy | 
+    |---------|     ---------     ------------     ------------------
 
 If you want to *build* your own images,
 go to [`dockerfiles/README.md`](dockerfiles/README.md).

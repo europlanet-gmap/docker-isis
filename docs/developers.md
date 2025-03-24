@@ -121,7 +121,7 @@ In [dockerfiles/](/dockerfiles/) we see the three `.dockerfiles` for
 [`gispy`](/dockerfiles/gispy.dockerfile),
 [`isis`](/dockerfiles/isis.dockerfile),
 and [`isisasp`](/dockerfiles/isisasp.dockerfile).
-We also see `{gispy,isis,isisasp}.{yml,txt}` files, those contain the
+We also see `{gispy}.{yml,txt}` files, those contain the
 Python packages to install in the respective images.
 
 The `.txt` files are (Pip) "requirements.txt" files, `.yml` files are

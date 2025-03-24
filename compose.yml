@@ -5,14 +5,14 @@ services:
     # environment:
     #   - JUPYTER_TOKEN='pass'
     ports:
-      - "8888:8888"
+      - "8885:8888"
     volumes:
       - ${PWD}:/home/jovyan/work
 
   jupyter-isis:
     image: gmap/jupyter-isis:latest
     ports:
-      - 8888:8888
+      - 8886:8888
     volumes:
       - ${PWD}:/home/jovyan/work
       - ${ISIS_DATA}:/isis/data
@@ -20,7 +20,15 @@ services:
   jupyter-isis-asp:
     image: gmap/jupyter-isis-asp:latest
     ports:
-      - 8888:8888
+      - 8887:8888
     volumes:
       - ${PWD}:/home/jovyan/work
       - ${ISIS_DATA}:/isis/data
+
+  jupyter-isis-asp-gispy:
+      image: gmap/jupyter-isis-asp-gispy:latest
+      ports:
+        - 8888:8888
+      volumes:
+        - ${PWD}:/home/jovyan/work
+        - ${ISIS_DATA}:/isis/data
