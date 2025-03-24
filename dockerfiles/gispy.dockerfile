@@ -1,87 +1,65 @@
-ARG BASE_IMAGE="jupyter/minimal-notebook:latest"
+ARG BASE_IMAGE="quay.io/jupyter/minimal-notebook:latest"
 FROM $BASE_IMAGE
 ENV BASE_IMAGE $BASE_IMAGE
 
-# ARG JUPYTERHUB_VERSION="3.0.0"
-# RUN python -m pip install --no-cache jupyterhub==$JUPYTERHUB_VERSION    && \
-#     echo "jupyterhub $(jupyterhub --version)" >> $CONDA_DIR/conda-meta/pinned
-
-# This lines above are necessary to guarantee a smooth coupling JupyterHub.
-# -------------------------------------------------------------------------
-
-ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
-
-# Guarantee some basic system tools are installed
-#
+# Switch to root user to install apt packages
 USER root
-RUN apt-get update -y                           && \
-    apt-get install -y --no-install-recommends  \
-        bzip2                                   \
-        ca-certificates                         \
-        curl                                    \
-        git                                     \
-        libgl1-mesa-glx                         \
-        libjpeg9                                \
-        libjpeg9-dev                            \
-        rsync                                   \
-        wget                                    \
-        vim                                     && \
-    rm -rf /var/lib/apt/lists/*                 && \
-    apt-get autoremove
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+      btop \
+      bzip2 \
+      ca-certificates \
+      curl \
+      git \            
+      libjpeg-dev \
+      rsync \
+      wget \
+      vim && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get autoremove -y
+
+# Back to non-root user (from the Jupyter Docker Stack approach)
 USER $NB_UID
 
 # Set some global configs to Conda
-#
-RUN conda config --set always_yes true                          && \
-    conda config --set use_only_tar_bz2 false                    && \
-    conda config --set notify_outdated_conda false              && \
-    #
-    ## conda-update may not be necessary, and can mess up things.
-    ## for instance, https://github.com/conda/conda/issues/10887,
-    ## guarantee 'pip' will be there after updating.
-    # conda update conda                                          && \
-    # conda install pip                                           && \
-    #
-    ## "nb-conda-kernels" doesn't seem to work (as I expected).
-    ## There is a discussion about managing kernels/nb_conda_kernels
-    ## in: https://github.com/jupyter-server/jupyter_server/pull/112.
-    ## In short, nb_conda_kernels used to work well, but is outdated.
-    # conda install nb_conda_kernels                              && \
-    #
+RUN conda config --set always_yes true            && \
+    conda config --set use_only_tar_bz2 false      && \
+    conda config --set notify_outdated_conda false && \
+    # We add pip, ipykernel and sh as a default create package so we always have pip in new envs
     conda config --add create_default_packages ipykernel        && \
     conda config --add create_default_packages pip              && \
     conda config --add create_default_packages sh               && \
+    # We disable the base conda env
+    conda config --set auto_activate_base False && \
     conda clean -a
 
-
-## Install the GIS packages listed in 'gispy.txt'
-#
-# Copy the list of packages to install ("requirements.txt")
-COPY gispy.txt /tmp/gispy.txt
-
-# Turn off PyGEOS, prefer Shapely (for some reason)
-#   - https://geopandas.org/en/stable/docs/user_guide/pygeos_to_shapely.html
+# Turn off PyGEOS, prefer Shapely
 ENV USE_PYGEOS=0
 
-# Install gispy packages
-RUN mamba install -y --file /tmp/gispy.txt      && \
-    mamba clean -a
+# Copy the environment.yml that has both conda and pip dependencies
+COPY gispy.txt /tmp/gispy.txt
 
+ARG ENV_NAME="gispy"
 
-## Write a README file for user
-#
+# Use mamba to update the base environment with all packages in environment.yml
+RUN mamba create -n $ENV_NAME && \    
+    source activate $ENV_NAME && \
+    mamba install -y --file /tmp/gispy.txt      && \
+    pip install ipykernel && \
+    python -m ipykernel install --user --name $ENV_NAME --display-name $ENV_NAME && \
+    mamba clean -a    
+
+# Update .bashrc so that interactive shells auto-activate the custom environment
+RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> /home/$NB_USER/.bashrc && \
+    echo "conda activate $ENV_NAME" >> /home/$NB_USER/.bashrc
+
+# Update PATH so that commands (like python) default to your custom environment
+ENV PATH /opt/conda/envs/$ENV_NAME/bin:$PATH
+
+# Ensure the new kernel is available in Jupyter
+RUN jupyter kernelspec list
+
+# (Optional) If you need a readme:
 ENV README=$HOME/README.md
-
-COPY readmes/readme.base.md /tmp/readme.base.md
-COPY readmes/readme.gispy.md /tmp/readme.gispy.md
-
-RUN cat /tmp/readme.base.md | envsubst              > $README  && \
-    echo ""                                         >> $README  &&\
-    cat /tmp/readme.gispy.md | envsubst             >> $README  && \
-    echo ""                                         >> $README  &&\
-    echo "Python/Conda packages installed by *us*:" >> $README  && \
-    conda env export --no-builds                                \
-        | grep --file /tmp/gispy.txt --word-regexp  >> $README  &&\
-    echo ""                                         >> $README
-
-# COPY etc/jupyterlab/user_settings.json /opt/conda/share/jupyter/lab/settings/overrides.json
+COPY readmes/readme.base.md   /tmp/readme.base.md
+COPY readmes/readme.gispy.md  /tmp/readme.gispy.md

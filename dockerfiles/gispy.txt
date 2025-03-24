@@ -1,10 +1,12 @@
 fiona
 gdal
-geoviews
 geopandas
-holoviews
+bokeh
 panel
 requests
 rasterio
 sh
 shapely
+rio-cogeo
+psycopg2
+rioxarray

@@ -3,6 +3,5 @@ channels:
   - usgs-astrogeology
   - conda-forge
   - default
-dependencies:
-  - python>=3.9
+dependencies:  
   - isis

@@ -25,6 +25,7 @@ USER $NB_UID
 ARG ASP_VERSION=""
 ARG ENV_NAME="isis"
 ARG ASP_ENV_NAME="isis-asp"
+ARG ISISASP_GISPY_ENV_NAME="isis-asp-gispy"
 
 COPY isisasp.yml /tmp/asp.tmp
 
@@ -48,19 +49,22 @@ RUN conda config --set always_yes true            && \
     conda config --set auto_activate_base False && \
     conda clean -a
 
-RUN mamba create -n $ENV_NAME  && \     
-    source activate $ENV_NAME && \  
-    mamba install stereo-pipeline=${ASP_VERSION} && \     
+RUN mamba create -n ${ENV_NAME} -y && \
+    source activate  ${ENV_NAME} && \
+    mamba install -y stereo-pipeline=${ASP_VERSION} && \
+    conda rename -n gispy  ${ISISASP_GISPY_ENV_NAME} && \
+    source activate --stack ${ISISASP_GISPY_ENV_NAME} && \    
     pip install ipykernel && \
-    python -m ipykernel install --user --name $ASP_ENV_NAME --display-name $ASP_ENV_NAME && \
-    mamba clean -a   
+    python -m ipykernel install --user --name ${ISISASP_GISPY_ENV_NAME} --display-name ${ISISASP_GISPY_ENV_NAME} && \
+    mamba clean -a
 
-# Update .bashrc so that interactive shells auto-activate the custom environment
+# Update the .bashrc so that any interactive shell activates the stacked environments:
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> /home/$NB_USER/.bashrc && \
-    echo "conda activate $ENV_NAME" >> /home/$NB_USER/.bashrc
+    echo "conda activate ${ENV_NAME} && conda activate --stack ${ISISASP_GISPY_ENV_NAME}" >> /home/$NB_USER/.bashrc && \
+    sed -i '/conda activate gispy/d' /home/$NB_USER/.bashrc
 
-# Update PATH so that commands (like python) default to your custom environment
-ENV PATH /opt/conda/envs/$ENV_NAME/bin:$PATH
+# Update PATH so that the new environment's executables are first in line
+ENV PATH /opt/conda/envs/${ENV_NAME}/bin:$PATH
 
 # Ensure the new kernel is available in Jupyter
 RUN jupyter kernelspec list
@@ -75,11 +79,11 @@ ENV ISISTESTDATA=${ISISTESTDATA}
 ENV ISISROOT="/opt/conda/envs/isis"   
 
 ## Write a README file for user
-#
+
 ENV README=$HOME/README.md
 
-COPY readmes/readme.isisasp.md /tmp/readme.isisasp.md
+COPY readmes/readme.isisaspgispy.md /tmp/readme.isisaspgispy.md
 
 RUN echo ""                                         >> $README  && \
-    cat /tmp/readme.isisasp.md | envsubst           >> $README  && \
+    cat /tmp/readme.isisaspgispy.md | envsubst           >> $README  && \
     echo ""                                         >> $README
