@@ -39,7 +39,18 @@ services:
       context: .
       dockerfile: isisaspgispy.dockerfile
       args:
-        BASE_IMAGE: ${ISISASP_GISPY_BASE_IMAGE:-jupyter-gispy}        
-        ENV_NAME: ${ISIS_ENV_NAME}
+        BASE_IMAGE: ${ASP_IMAGE:-jupyter-isis-asp}        
+        ENV_NAME: ${GISPY_ENV_NAME}
+        ASP_ENV_NAME: ${ASP_ENV_NAME}
+        ISISASP_GISPY_ENV_NAME: ${ISISASP_GISPY_ENV_NAME}
+        
+  jupyter-isis-asp340-gispy:
+    image: ${ISISASP340_GISPY_IMAGE:-jupyter-isis-asp-gispy}
+    build:
+      context: .
+      dockerfile: isisaspgispy340.dockerfile
+      args:
+        BASE_IMAGE: ${ASP_IMAGE:-jupyter-isis-asp}        
+        ENV_NAME: ${GISPY_ENV_NAME}
         ASP_ENV_NAME: ${ASP_ENV_NAME}
         ISISASP_GISPY_ENV_NAME: ${ISISASP_GISPY_ENV_NAME}
