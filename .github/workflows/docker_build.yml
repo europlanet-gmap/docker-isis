@@ -1,9 +1,10 @@
 # Build and Publish Container Images
 #
-# This workflow builds and publishes three Docker images:
+# This workflow builds and publishes four Docker images:
 # - GISPy
 # - ISIS
-# - ASP
+# - ISIS-ASP
+# - ISIS-ASP-GISPy
 #
 # Images are tagged using the branch name (for pushes) or using the tag name
 # (for tagged commits). When a tag is pushed, the images are also tagged as "latest".
@@ -35,7 +36,7 @@ jobs:
     env:
       USER_ORG: ${{ vars.DOCKERHUB_NAMESPACE }}
       SERVICE: jupyter-gispy
-      REPO: ${{ env.USER_ORG }}/$SERVICE
+      REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-gispy
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -63,10 +64,7 @@ jobs:
 
       - name: Push GISPy Image
         run: |
-          docker image ls \
-          | tail -n+2 | awk '{print $1":"$2}' \
-          | grep "$REPO" \
-          | xargs -I'{}' docker push {}
+          docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
 
   isis:
     runs-on: ubuntu-latest
@@ -76,7 +74,7 @@ jobs:
     env:
       USER_ORG: ${{ vars.DOCKERHUB_NAMESPACE }}
       SERVICE: jupyter-isis
-      REPO: ${{ env.USER_ORG }}/$SERVICE
+      REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -110,10 +108,7 @@ jobs:
 
       - name: Push ISIS Image
         run: |
-          docker image ls \
-          | tail -n+2 | awk '{print $1":"$2}' \
-          | grep "$REPO" \
-          | xargs -I'{}' docker push {}
+          docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
 
       - name: List Docker Images
         run: docker image ls -a
@@ -127,7 +122,7 @@ jobs:
     env:
       USER_ORG: ${{ vars.DOCKERHUB_NAMESPACE }}
       SERVICE: jupyter-isis-asp
-      REPO: ${{ env.USER_ORG }}/$SERVICE
+      REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis-asp
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -143,7 +138,7 @@ jobs:
 
       - name: Build ISIS-ASP Image
         run: |
-          ISIS_IMAGE=${{ env.USER_ORG }}/jupyter-isis:${GITHUB_REF_NAME}
+          ISIS_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis:${GITHUB_REF_NAME}
           docker compose build --build-arg BASE_IMAGE=${ISIS_IMAGE} $SERVICE
 
       - name: Tag Image (Push Event)
@@ -167,12 +162,58 @@ jobs:
 
       - name: Push ISIS-ASP Image
         run: |
-          docker image ls \
-          | tail -n+2 | awk '{print $1":"$2}' \
-          | grep "$REPO" \
-          | xargs -I'{}' docker push {}
+          docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
 
       - name: List Docker Images
         run: docker image ls -a
 
- 
+  isis-asp-gispy:
+    needs: gispy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./dockerfiles
+    env:
+      USER_ORG: ${{ vars.DOCKERHUB_NAMESPACE }}
+      SERVICE: jupyter-isis-asp-gispy
+      REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis-asp-gispy
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Load Environment Variables
+        run: |
+          source .env
+          echo "ISIS_VERSION=${ISIS_VERSION}" >> $GITHUB_ENV
+          echo "ASP_VERSION=${ASP_VERSION}" >> $GITHUB_ENV
+
+      - name: Build ISIS-ASP-GISPy Image
+        run: |
+          BASE_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis-asp:${GITHUB_REF_NAME}
+          docker compose build --build-arg BASE_IMAGE=${BASE_IMAGE} $SERVICE
+
+      - name: Tag Image (Push Event)
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
+
+      - name: Tag Image as Latest and Versioned (Tag Event)
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          docker tag $NEW_IMAGE $REPO:latest
+          docker tag $NEW_IMAGE $REPO:${ISIS_VERSION}-${ASP_VERSION}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push ISIS-ASP-GISPy Image
+        run: |
+          docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
+
+      - name: List Docker Images
+        run: docker image ls -a
