@@ -21,6 +21,7 @@ on:
     branches:
       - 'test'
       - 'dev'
+      - 'latest'
     #   - 'stable'
     # branches-ignore:
     #   - 'master'
