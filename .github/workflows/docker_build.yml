@@ -1,21 +1,21 @@
-# Build and Publish Container Images
+# Build and Publish Container Images Workflow
 #
 # This workflow builds and publishes four Docker images:
-# - GISPy
-# - ISIS
-# - ISIS-ASP
-# - ISIS-ASP-GISPy
+#  - GISPy
+#  - ISIS
+#  - ISIS-ASP
+#  - ISIS-ASP-GISPy
 #
-# Images are tagged using the branch name (for pushes) or using the tag name
-# (for tagged commits). When a tag is pushed, the images are also tagged as "latest".
+# Image tagging details:
+#  - For push events (branch updates): Images are tagged with the branch name.
+#  - For tag events: Images are tagged with "latest" and version numbers.
 #
 # Required repository-level configuration:
-# - Variable:
-#     - DOCKERHUB_NAMESPACE: Your DockerHub user/organization namespace
-# - Secrets:
-#     - DOCKERHUB_USERNAME
-#     - DOCKERHUB_TOKEN
-
+#  - Variable:
+#      - DOCKERHUB_NAMESPACE: Your DockerHub user/organization namespace.
+#  - Secrets:
+#      - DOCKERHUB_USERNAME: Your DockerHub username.
+#      - DOCKERHUB_TOKEN: Your DockerHub access token.
 name: Build and Publish Containers
 
 on:
@@ -28,44 +28,57 @@ on:
       - '*'
 
 jobs:
+  #########################################
+  # Job: Build and Publish GISPy Image
+  #########################################
   gispy:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./dockerfiles
+        working-directory: ./dockerfiles  # Ensure your docker-compose file is here.
     env:
+      # Directly construct the repository name using the DockerHub namespace variable.
       USER_ORG: ${{ vars.DOCKERHUB_NAMESPACE }}
       SERVICE: jupyter-gispy
       REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-gispy
     steps:
+      # Step: Checkout the repository.
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Step: Build the GISPy image.
       - name: Build GISPy Image
         run: docker compose build $SERVICE
 
+      # Step: Tag the image for branch push events.
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
 
+      # Step: Tag the image as 'latest' for tag events.
       - name: Tag Image as Latest (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:latest
 
+      # Step: Log in to Docker Hub.
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # Step: Push the tagged image(s) to Docker Hub.
       - name: Push GISPy Image
         run: |
           docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
 
+  #########################################
+  # Job: Build and Publish ISIS Image
+  #########################################
   isis:
     runs-on: ubuntu-latest
     defaults:
@@ -79,20 +92,24 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Load the .env file and set the ISIS_VERSION environment variable.
       - name: Load Environment Variables
         run: |
           source .env
           echo "ISIS_VERSION=${ISIS_VERSION}" >> $GITHUB_ENV
 
+      # Build the ISIS image.
       - name: Build ISIS Image
         run: docker compose build $SERVICE
 
+      # Tag the image on push events.
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
 
+      # Tag the image as versioned (using ISIS_VERSION) and 'latest' on tag events.
       - name: Tag Image as Latest and Versioned (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
         run: |
@@ -110,11 +127,15 @@ jobs:
         run: |
           docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
 
+      # Optional: List all Docker images.
       - name: List Docker Images
         run: docker image ls -a
 
+  #########################################
+  # Job: Build and Publish ISIS-ASP Image
+  #########################################
   isis-asp:
-    needs: isis
+    needs: isis  # This job runs after the ISIS image is built.
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -127,6 +148,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Load .env variables for ISIS and ASP.
       - name: Load Environment Variables
         run: |
           source .env
@@ -136,17 +158,20 @@ jobs:
       - name: List Docker Images
         run: docker image ls -a
 
+      # Build the ISIS-ASP image using a base image from jupyter-isis.
       - name: Build ISIS-ASP Image
         run: |
           ISIS_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis:${GITHUB_REF_NAME}
           docker compose build --build-arg BASE_IMAGE=${ISIS_IMAGE} $SERVICE
 
+      # Tag the image for branch pushes.
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
 
+      # Tag the image as 'latest' and with a version composed of ISIS_VERSION and ASP_VERSION on tag events.
       - name: Tag Image as Latest and Versioned (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
         run: |
@@ -167,8 +192,11 @@ jobs:
       - name: List Docker Images
         run: docker image ls -a
 
+  #########################################
+  # Job: Build and Publish ISIS-ASP-GISPy Image
+  #########################################
   isis-asp-gispy:
-    needs: gispy
+    needs: gispy  # This job depends on the GISPy image; adjust if needed.
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -181,23 +209,27 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Load environment variables for ISIS and ASP.
       - name: Load Environment Variables
         run: |
           source .env
           echo "ISIS_VERSION=${ISIS_VERSION}" >> $GITHUB_ENV
           echo "ASP_VERSION=${ASP_VERSION}" >> $GITHUB_ENV
 
+      # Build the ISIS-ASP-GISPy image using the ISIS-ASP image as the base.
       - name: Build ISIS-ASP-GISPy Image
         run: |
           BASE_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis-asp:${GITHUB_REF_NAME}
           docker compose build --build-arg BASE_IMAGE=${BASE_IMAGE} $SERVICE
 
+      # Tag the image for branch push events.
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
 
+      # Tag the image as 'latest' and with version numbers on tag events.
       - name: Tag Image as Latest and Versioned (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
         run: |
