@@ -219,7 +219,7 @@ jobs:
       # Build the ISIS-ASP-GISPy image using the ISIS-ASP image as the base.
       - name: Build ISIS-ASP-GISPy Image
         run: |
-          BASE_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis-asp:${GITHUB_REF_NAME}
+          BASE_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-gispy:${GITHUB_REF_NAME}
           docker compose build --build-arg BASE_IMAGE=${BASE_IMAGE} $SERVICE
 
       # Tag the image for branch push events.
