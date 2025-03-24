@@ -20,6 +20,7 @@ on:
   push:
     branches:
       - 'test'
+      - 'dev'
     #   - 'stable'
     # branches-ignore:
     #   - 'master'
