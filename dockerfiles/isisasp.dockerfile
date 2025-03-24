@@ -25,13 +25,6 @@ USER $NB_UID
 ARG ASP_VERSION=""
 ARG ENV_NAME="isis"
 ARG ASP_ENV_NAME="isis-asp"
-
-COPY isisasp.yml /tmp/asp.tmp
-
-RUN [ -n "${ASP_VERSION}" ]                                             && \
-    sed "s/\(.*- stereo-pipeline\).*/\1=$ASP_VERSION/" /tmp/asp.tmp     \
-        > /tmp/asp.yml                                                  || \
-    cp /tmp/asp.tmp /tmp/asp.yml
  
 RUN conda config --set always_yes true            && \
     conda config --set use_only_tar_bz2 false      && \
