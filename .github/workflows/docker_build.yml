@@ -1,21 +1,3 @@
-# Build and Publish Container Images Workflow
-#
-# This workflow builds and publishes four Docker images:
-#  - GISPy
-#  - ISIS
-#  - ISIS-ASP
-#  - ISIS-ASP-GISPy
-#
-# Image tagging details:
-#  - For push events (branch updates): Images are tagged with the branch name.
-#  - For tag events: Images are tagged with "latest" and version numbers.
-#
-# Required repository-level configuration:
-#  - Variable:
-#      - DOCKERHUB_NAMESPACE: Your DockerHub user/organization namespace.
-#  - Secrets:
-#      - DOCKERHUB_USERNAME: Your DockerHub username.
-#      - DOCKERHUB_TOKEN: Your DockerHub access token.
 name: Build and Publish Containers
 
 on:
@@ -35,43 +17,42 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./dockerfiles  # Ensure your docker-compose file is here.
+        working-directory: ./dockerfiles
     env:
-      # Directly construct the repository name using the DockerHub namespace variable.
       USER_ORG: ${{ vars.DOCKERHUB_NAMESPACE }}
       SERVICE: jupyter-gispy
       REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-gispy
     steps:
-      # Step: Checkout the repository.
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Step: Build the GISPy image.
+      - name: Load Environment Variables
+        run: |
+          set -a
+          source .env
+          set +a
+
       - name: Build GISPy Image
         run: docker compose build $SERVICE
 
-      # Step: Tag the image for branch push events.
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
 
-      # Step: Tag the image as 'latest' for tag events.
       - name: Tag Image as Latest (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:latest
 
-      # Step: Log in to Docker Hub.
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Step: Push the tagged image(s) to Docker Hub.
       - name: Push GISPy Image
         run: |
           docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
@@ -92,24 +73,22 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Load the .env file and set the ISIS_VERSION environment variable.
       - name: Load Environment Variables
         run: |
+          set -a
           source .env
+          set +a
           echo "ISIS_VERSION=${ISIS_VERSION}" >> $GITHUB_ENV
 
-      # Build the ISIS image.
       - name: Build ISIS Image
         run: docker compose build $SERVICE
 
-      # Tag the image on push events.
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
 
-      # Tag the image as versioned (using ISIS_VERSION) and 'latest' on tag events.
       - name: Tag Image as Latest and Versioned (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
         run: |
@@ -127,7 +106,6 @@ jobs:
         run: |
           docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
 
-      # Optional: List all Docker images.
       - name: List Docker Images
         run: docker image ls -a
 
@@ -135,7 +113,7 @@ jobs:
   # Job: Build and Publish ISIS-ASP Image
   #########################################
   isis-asp:
-    needs: isis  # This job runs after the ISIS image is built.
+    needs: isis
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -148,30 +126,28 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Load .env variables for ISIS and ASP.
       - name: Load Environment Variables
         run: |
+          set -a
           source .env
+          set +a
           echo "ISIS_VERSION=${ISIS_VERSION}" >> $GITHUB_ENV
           echo "ASP_VERSION=${ASP_VERSION}" >> $GITHUB_ENV
 
       - name: List Docker Images
         run: docker image ls -a
 
-      # Build the ISIS-ASP image using a base image from jupyter-isis.
       - name: Build ISIS-ASP Image
         run: |
           ISIS_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis:${GITHUB_REF_NAME}
           docker compose build --build-arg BASE_IMAGE=${ISIS_IMAGE} $SERVICE
 
-      # Tag the image for branch pushes.
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
 
-      # Tag the image as 'latest' and with a version composed of ISIS_VERSION and ASP_VERSION on tag events.
       - name: Tag Image as Latest and Versioned (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
         run: |
@@ -196,7 +172,7 @@ jobs:
   # Job: Build and Publish ISIS-ASP-GISPy Image
   #########################################
   isis-asp-gispy:
-    needs: gispy  # This job depends on the GISPy image; adjust if needed.
+    needs: gispy
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -209,27 +185,25 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Load environment variables for ISIS and ASP.
       - name: Load Environment Variables
         run: |
+          set -a
           source .env
+          set +a
           echo "ISIS_VERSION=${ISIS_VERSION}" >> $GITHUB_ENV
           echo "ASP_VERSION=${ASP_VERSION}" >> $GITHUB_ENV
 
-      # Build the ISIS-ASP-GISPy image using the ISIS-ASP image as the base.
       - name: Build ISIS-ASP-GISPy Image
         run: |
           BASE_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-gispy:${GITHUB_REF_NAME}
           docker compose build --build-arg BASE_IMAGE=${BASE_IMAGE} $SERVICE
 
-      # Tag the image for branch push events.
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
 
-      # Tag the image as 'latest' and with version numbers on tag events.
       - name: Tag Image as Latest and Versioned (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
         run: |
@@ -249,3 +223,234 @@ jobs:
 
       - name: List Docker Images
         run: docker image ls -a
+
+  #########################################
+  # Job: Build and Publish Matisse Image
+  #########################################
+  matisse:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./dockerfiles
+    env:
+      SERVICE: jupyter-matisse
+      REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-matisse
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Load Environment Variables
+        run: |
+          set -a
+          source .env
+          set +a
+
+      - name: Build Matisse Image
+        run: docker compose build $SERVICE
+
+      - name: Tag Image (Push Event)
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
+
+      - name: Tag Image as Latest (Tag Event)
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          docker tag $NEW_IMAGE $REPO:latest
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push Matisse Image
+        run: |
+          docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
+
+  #########################################
+  # Job: Build and Publish Matisse-GISPy Image
+  #########################################
+  matisse-gispy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./dockerfiles
+    env:
+      SERVICE: jupyter-matisse-gispy
+      REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-matisse-gispy
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Load Environment Variables
+        run: |
+          set -a
+          source .env
+          set +a
+
+      - name: Build Matisse-GISPy Image
+        run: docker compose build $SERVICE
+
+      - name: Tag Image (Push Event)
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
+
+      - name: Tag Image as Latest (Tag Event)
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          docker tag $NEW_IMAGE $REPO:latest
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push Matisse-GISPy Image
+        run: |
+          docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
+
+  #########################################
+  # Job: Build and Publish Fortran Image
+  #########################################
+  fortran:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./dockerfiles
+    env:
+      SERVICE: jupyter-fortran
+      REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-fortran
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Load Environment Variables
+        run: |
+          set -a
+          source .env
+          set +a
+
+      - name: Build Fortran Image
+        run: docker compose build $SERVICE
+
+      - name: Tag Image (Push Event)
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
+
+      - name: Tag Image as Latest (Tag Event)
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          docker tag $NEW_IMAGE $REPO:latest
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push Fortran Image
+        run: |
+          docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
+
+  #########################################
+  # Job: Build and Publish Grass Image
+  #########################################
+  grass:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./dockerfiles
+    env:
+      SERVICE: jupyter-grass
+      REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Load Environment Variables
+        run: |
+          set -a
+          source .env
+          set +a
+
+      - name: Build Grass Image
+        run: docker compose build $SERVICE
+
+      - name: Tag Image (Push Event)
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
+
+      - name: Tag Image as Latest (Tag Event)
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          docker tag $NEW_IMAGE $REPO:latest
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push Grass Image
+        run: |
+          docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
+
+  #########################################
+  # Job: Build and Publish Grass-GISPy Image
+  #########################################
+  grass-gispy:
+    needs: grass
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./dockerfiles
+    env:
+      SERVICE: jupyter-grass-gispy
+      REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass-gispy
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Load Environment Variables
+        run: |
+          set -a
+          source .env
+          set +a
+
+      - name: Build Grass-GISPy Image
+        run: docker compose build $SERVICE
+
+      - name: Tag Image (Push Event)
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
+
+      - name: Tag Image as Latest (Tag Event)
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          docker tag $NEW_IMAGE $REPO:latest
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push Grass-GISPy Image
+        run: |
+          docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
