@@ -410,49 +410,80 @@ jobs:
       - name: Push GRASS Image
         run: |
           docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
+#########################################
+ # Job: Build and Publish Grass-GISPy Image
+ #########################################
+ grass-gispy:
+   runs-on: ubuntu-latest
+   defaults:
+     run:
+       working-directory: ./dockerfiles
+   env:
+     USER_ORG: ${{ vars.DOCKERHUB_NAMESPACE }}
+     SERVICE: jupyter-grass-gispy
+     REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass-gispy
+   steps:
+     - name: Checkout Code
+       uses: actions/checkout@v4
 
-  #########################################
-  # Job: Build and Publish Grass-GISPy Image
-  #########################################
-  grass-gispy:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./dockerfiles
-    env:
-      SERVICE: jupyter-grass-gispy
-      REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass-gispy
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-      
-      - name: Load Environment Variables
-        run: |
-          set -a
-          source .env
-          set +a
+     - name: Debug Compose File (Optional)
+       run: |
+         echo "Contents of docker-compose.yml:"
+         cat docker-compose.yml
+         # Add more debugging steps here if needed, e.g.,
+         # docker compose config --verbose $SERVICE
 
-      - name: Build GRASS-GISPy Image
-        run: docker compose build $SERVICE
+     - name: Load Environment Variables
+       run: |
+         set -a
+         source .env
+         set +a
 
-      - name: Tag Image (Push Event)
-        if: ${{ github.event_name == 'push' }}
-        run: |
-          NEW_IMAGE=$(docker compose config --images $SERVICE)
-          docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
+     - name: Build GRASSS-GISPy Image
+       run: docker compose build $SERVICE
 
-      - name: Tag Image as Latest (Tag Event)
-        if: ${{ github.ref_type == 'tag' }}
-        run: |
-          NEW_IMAGE=$(docker compose config --images $SERVICE)
-          docker tag $NEW_IMAGE $REPO:latest
+     - name: Get Image Name (Push Event)
+       if: ${{ github.event_name == 'push' }}
+       id: get_image_name_push
+       run: |
+         NEW_IMAGE=$(docker compose config --images $SERVICE)
+         echo "Image Name (Push): $NEW_IMAGE"  # Debugging: Print the value
+         echo "::set-output name=image_name::$NEW_IMAGE"
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+     - name: Tag Image (Push Event)
+       if: ${{ github.event_name == 'push' }}
+       run: |
+         IMAGE_NAME="${{ steps.get_image_name_push.outputs.image_name }}"
+         echo "Tagging image: $IMAGE_NAME as $REPO:$GITHUB_REF_NAME"
+         docker tag "$IMAGE_NAME" "$REPO:$GITHUB_REF_NAME"
 
-      - name: Push GRASS-GISPy Image
-        run: |
-          docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
+     - name: Get Image Name (Tag Event)
+       if: ${{ github.ref_type == 'tag' }}
+       id: get_image_name_tag
+       run: |
+         NEW_IMAGE=$(docker compose config --images $SERVICE)
+         echo "Image Name (Tag): $NEW_IMAGE"  # Debugging: Print the value
+         echo "::set-output name=image_name::$NEW_IMAGE"
+
+     - name: Tag Image as Latest (Tag Event)
+       if: ${{ github.ref_type == 'tag' }}
+       run: |
+         IMAGE_NAME="${{ steps.get_image_name_tag.outputs.image_name }}"
+         echo "Tagging image: $IMAGE_NAME as $REPO:latest"
+         docker tag "$IMAGE_NAME" "$REPO:latest"
+
+     - name: Login to Docker Hub
+       uses: docker/login-action@v3
+       with:
+         username: ${{ secrets.DOCKERHUB_USERNAME }}
+         password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+     - name: Push GRASSS-GISPy Image (Push Event)
+       if: ${{ github.event_name == 'push' }}
+       run: |
+         docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
+
+     - name: Push GRASSS-GISPy Image (Tag Event)
+       if: ${{ github.ref_type == 'tag' }}
+       run: |
+         docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
