@@ -172,7 +172,7 @@ jobs:
   # Job: Build and Publish ISIS-ASP-GISPy Image
   #########################################
   isis-asp-gispy:
-    needs: gispy
+    needs: isis-asp
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -431,7 +431,9 @@ jobs:
           set +a
 
       - name: Build Grass-GISPy Image
-        run: docker compose build $SERVICE
+        run: |
+          BASE_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass:${GITHUB_REF_NAME}
+          docker compose build --build-arg BASE_IMAGE=${BASE_IMAGE} $SERVICE
 
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
