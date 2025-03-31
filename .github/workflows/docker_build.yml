@@ -173,15 +173,13 @@ jobs:
   isis-asp-gispy:
     needs: isis-asp
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./dockerfiles
     env:
       USER_ORG: ${{ vars.DOCKERHUB_NAMESPACE }}
       SERVICE: jupyter-isis-asp-gispy
       REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis-asp-gispy
-      # Override ASP_IMAGE so the Compose file picks the correct base image.
-      ASP_IMAGE: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis-asp:${GITHUB_REF_NAME}
-    defaults:
-      run:
-        working-directory: ./dockerfiles
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -194,10 +192,13 @@ jobs:
           echo "ISIS_VERSION=${ISIS_VERSION}" >> $GITHUB_ENV
           echo "ASP_VERSION=${ASP_VERSION}" >> $GITHUB_ENV
 
-      - name: Build ISIS-ASP-GISPy Image
+      - name: List Docker Images
+        run: docker image ls -a
+
+      - name: Build ISIS-ASP-GISPY Image
         run: |
-          echo "Using ASP_IMAGE: $ASP_IMAGE"
-          docker compose build $SERVICE
+          ASP_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis-asp:${GITHUB_REF_NAME}
+          docker compose build --build-arg BASE_IMAGE=${ASP_IMAGE} $SERVICE
 
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
@@ -205,11 +206,12 @@ jobs:
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
 
-      - name: Tag Image as Latest (Tag Event)
+      - name: Tag Image as Latest and Versioned (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:latest
+          docker tag $NEW_IMAGE $REPO:${ISIS_VERSION}-${ASP_VERSION}
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -217,7 +219,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push ISIS-ASP-GISPy Image
+      - name: Push ISIS-ASP Image
         run: |
           docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
 
@@ -384,7 +386,8 @@ jobs:
           set +a
 
       - name: Build Grass Image
-        run: docker compose build $SERVICE
+        run: |          
+          docker compose build --build-arg BASE_IMAGE=${GRASS_BASE_IMAGE} $SERVICE
 
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
@@ -411,42 +414,37 @@ jobs:
   #########################################
   # Job: Build and Publish Grass-GISPy Image
   #########################################
-  jupyter-grass-gispy:
-    needs: grass
+  grass-gispy:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./dockerfiles
     env:
-      USER_ORG: ${{ vars.DOCKERHUB_NAMESPACE }}
       SERVICE: jupyter-grass-gispy
       REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass-gispy
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
+      
       - name: Load Environment Variables
         run: |
           set -a
           source .env
-          set +a          
+          set +a
 
-      - name: Push GRASS-GISPy Image Image
-        run: |
-          BASE_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass:${GITHUB_REF_NAME}
-          docker compose build --build-arg BASE_IMAGE=${BASE_IMAGE} $SERVICE
+      - name: Build Grass Image
+        run: docker compose build $SERVICE
 
       - name: Tag Image (Push Event)
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' }}        
         run: |
-          NEW_IMAGE=$(docker compose config --images $SERVICE)
-          docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
+          GRASS_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass:${GITHUB_REF_NAME}
+          docker compose build --build-arg BASE_IMAGE=${GRASS_IMAGE} $SERVICE
 
-      - name: Tag Image as Latest and Versioned (Tag Event)
+      - name: Tag Image as Latest (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
-          docker tag $NEW_IMAGE $REPO:latest
           docker tag $NEW_IMAGE $REPO:latest
 
       - name: Login to Docker Hub
@@ -455,9 +453,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push GRASS-GISPy Image
+      - name: Push Grass Image
         run: |
           docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
-
-      - name: List Docker Images
-        run: docker image ls -a
