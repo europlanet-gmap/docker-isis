@@ -373,21 +373,21 @@ jobs:
       run:
         working-directory: ./dockerfiles
     env:
+      USER_ORG: ${{ vars.DOCKERHUB_NAMESPACE }}
       SERVICE: jupyter-grass
       REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      
+
       - name: Load Environment Variables
         run: |
           set -a
           source .env
           set +a
 
-      - name: Build Grass Image
-        run: |          
-          docker compose build --build-arg BASE_IMAGE=${GRASS_BASE_IMAGE} $SERVICE
+      - name: Build GRASS Image
+        run: docker compose build $SERVICE
 
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
@@ -407,7 +407,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push Grass Image
+      - name: Push GRASS Image
         run: |
           docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
 
