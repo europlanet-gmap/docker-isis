@@ -195,7 +195,7 @@ jobs:
 
       - name: Build ISIS-ASP-GISPy Image
         run: |
-          BASE_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-gispy:${GITHUB_REF_NAME}
+          BASE_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis-asp:${GITHUB_REF_NAME}
           docker compose build --build-arg BASE_IMAGE=${BASE_IMAGE} $SERVICE
 
       - name: Tag Image (Push Event)
@@ -412,7 +412,7 @@ jobs:
   # Job: Build and Publish Grass-GISPy Image
   #########################################
   grass-gispy:
-    needs: grass
+    needs: grass  # Wait for the 'grass' job to build and push the base image
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -423,17 +423,31 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      
+
       - name: Load Environment Variables
         run: |
           set -a
           source .env
           set +a
 
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pull Base Image for Grass
+        run: |
+          # Construct the fully qualified base image name using your namespace and the branch/tag name.
+          BASE_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass:${GITHUB_REF_NAME}
+          echo "Pulling base image: ${BASE_IMAGE}"
+          docker pull ${BASE_IMAGE}
+
       - name: Build Grass-GISPy Image
         run: |
-          BASE_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass:${GITHUB_REF_NAME}
-          docker compose build --build-arg BASE_IMAGE=${BASE_IMAGE} $SERVICE
+          # Override the GRASS_IMAGE environment variable so that docker-compose uses the fully qualified name.
+          export GRASS_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass:${GITHUB_REF_NAME}
+          docker compose build $SERVICE
 
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
@@ -447,12 +461,9 @@ jobs:
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:latest
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Push Grass-GISPy Image
         run: |
           docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
+
+      - name: List Docker Images
+        run: docker image ls -a
