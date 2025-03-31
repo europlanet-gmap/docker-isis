@@ -411,12 +411,11 @@ jobs:
         run: |
           docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
 
-
   #########################################
   # Job: Build and Publish Grass-GISPy Image
   #########################################
   grass-gispy:    
-    needs: jupyter-grass
+    needs: grass
     runs-on: ubuntu-latest
     defaults:
       run:
