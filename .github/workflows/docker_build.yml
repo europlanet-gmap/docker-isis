@@ -432,14 +432,14 @@ jobs:
           source .env
           set +a
 
-      - name: Build Grass Image
+      - name: Build GRASS-GISPy Image
         run: docker compose build $SERVICE
 
       - name: Tag Image (Push Event)
-        if: ${{ github.event_name == 'push' }}        
+        if: ${{ github.event_name == 'push' }}
         run: |
-          GRASS_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass:${GITHUB_REF_NAME}
-          docker compose build --build-arg BASE_IMAGE=${GRASS_IMAGE} $SERVICE
+          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
 
       - name: Tag Image as Latest (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
@@ -453,6 +453,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push Grass Image
+      - name: Push GRASS-GISPy Image
         run: |
           docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
