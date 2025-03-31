@@ -94,7 +94,7 @@ services:
         BASE_ENV_NAME: ${GRASS_ENV_NAME}
 
   jupyter-grass-gispy:
-    image: ${GISPY_GRASS_IMAGE:-jupyter-gispy-grass}
+    image: ${GISPY_GRASS_IMAGE:-jupyter-grass-gispy}
     depends_on:
       - jupyter-grass
     build:
