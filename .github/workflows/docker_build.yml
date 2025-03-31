@@ -167,20 +167,21 @@ jobs:
 
       - name: List Docker Images
         run: docker image ls -a
-
   #########################################
   # Job: Build and Publish ISIS-ASP-GISPy Image
   #########################################
   isis-asp-gispy:
     needs: isis-asp
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./dockerfiles
     env:
       USER_ORG: ${{ vars.DOCKERHUB_NAMESPACE }}
       SERVICE: jupyter-isis-asp-gispy
       REPO: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis-asp-gispy
+      # Override ASP_IMAGE so the Compose file picks the correct base image.
+      ASP_IMAGE: ${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis-asp:${GITHUB_REF_NAME}
+    defaults:
+      run:
+        working-directory: ./dockerfiles
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -195,8 +196,8 @@ jobs:
 
       - name: Build ISIS-ASP-GISPy Image
         run: |
-          BASE_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-isis-asp:${GITHUB_REF_NAME}
-          docker compose build --build-arg BASE_IMAGE=${BASE_IMAGE} $SERVICE
+          echo "Using ASP_IMAGE: $ASP_IMAGE"
+          docker compose build $SERVICE
 
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
@@ -204,12 +205,11 @@ jobs:
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
 
-      - name: Tag Image as Latest and Versioned (Tag Event)
+      - name: Tag Image as Latest (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
           docker tag $NEW_IMAGE $REPO:latest
-          docker tag $NEW_IMAGE $REPO:${ISIS_VERSION}-${ASP_VERSION}
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
