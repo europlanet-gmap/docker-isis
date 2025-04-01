@@ -439,8 +439,8 @@ jobs:
 
       - name: Build GRASS-GISpy Image
         run: |
-          GRASS_GISPY_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass:${GITHUB_REF_NAME}
-          docker compose build --build-arg BASE_IMAGE=${GRASS_GISPY_IMAGE} $SERVICE
+          GRASS_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass:${GITHUB_REF_NAME}
+          docker compose build --build-arg BASE_IMAGE=${GRASS_IMAGE} $SERVICE
 
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
