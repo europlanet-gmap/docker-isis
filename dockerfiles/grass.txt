@@ -1,0 +1,17 @@
+geopandas
+requests
+rasterio
+sh
+shapely
+beautifulsoup4
+matplotlib
+astropy
+rioxarray
+scipy
+scikit-image
+scikit-learn
+tqdm
+numba
+rio-cogeo
+bokeh
+dask[distributed]

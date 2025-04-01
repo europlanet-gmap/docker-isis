@@ -24,10 +24,6 @@ USER $NB_UID
 
 ARG ISIS_VERSION=""
 ARG ASP_VERSION=""
-ARG ENV_NAME="gispy"
-ARG ASP_ENV_NAME="isis-asp"
-ARG ISISASP_GISPY_ENV_NAME="isis-asp-gispy"
- 
 RUN conda config --set always_yes true            && \
     conda config --set use_only_tar_bz2 false      && \
     conda config --set notify_outdated_conda false && \
@@ -49,28 +45,39 @@ ENV USE_PYGEOS=0
 # Copy the environment.yml that has both conda and pip dependencies
 COPY gispy.txt /tmp/gispy.txt
 
-# Use mamba to update the base environment with all packages in environment.yml
-RUN mamba create -n ${ENV_NAME} -y && \
-    source activate  ${ENV_NAME} && \
+ARG ENV_NAME="isis-asp-gispy"
+ARG BASE_ENV_NAME="isis-asp" 
+
+
+RUN source /opt/conda/etc/profile.d/conda.sh && \    
+    mamba create -n $ENV_NAME  && \     
+    conda activate $ENV_NAME && \  
     mamba install -y --file /tmp/gispy.txt && \
-    source deactivate  ${ENV_NAME} && \
-    conda rename -n gispy  ${ISISASP_GISPY_ENV_NAME} && \
-    source activate  ${ISIS_ENV_NAME} && \
-    source activate --stack ${ISISASP_GISPY_ENV_NAME} && \    
+    source activate --stack ${BASE_ENV_NAME} && \    
     pip install ipykernel && \
-    python -m ipykernel install --user --name ${ISISASP_GISPY_ENV_NAME} --display-name ${ISISASP_GISPY_ENV_NAME} && \
+    python -m ipykernel install --user --name ${ENV_NAME} --display-name ${ENV_NAME} && \
     mamba clean -a
 
 # Update the .bashrc so that any interactive shell activates the stacked environments:
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> /home/$NB_USER/.bashrc && \
+<<<<<<< HEAD
     echo "conda activate ${ISIS_ENV_NAME} && conda activate --stack ${ISISASP_GISPY_ENV_NAME}" >> /home/$NB_USER/.bashrc && \
     sed -i '/conda activate gispy/d' /home/$NB_USER/.bashrc
+=======
+    echo "conda activate ${ISIS_ENV_NAME} && conda activate --stack ${ENV_NAME}" >> /home/$NB_USER/.bashrc && \
+    sed -i '/conda activate ${BASE_ENV_NAME}/d' /home/$NB_USER/.bashrc
+>>>>>>> dev
 
 # Update PATH so that the new environment's executables are first in line
 ENV PATH /opt/conda/envs/${ENV_NAME}/bin:$PATH
 
 # Ensure the new kernel is available in Jupyter
+<<<<<<< HEAD
 RUN jupyter kernelspec list
+=======
+RUN jupyter kernelspec list 
+
+>>>>>>> dev
 # Set Environmental Variables for ISIS DATA
 ARG ISISDATA="/isis/data"
 ARG ISISTESTDATA="/isis/testdata"

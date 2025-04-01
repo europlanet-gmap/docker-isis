@@ -30,8 +30,8 @@ services:
       args:
         BASE_IMAGE: ${ISIS_IMAGE:-jupyter-isis}
         ASP_VERSION: ${ASP_VERSION}
-        ENV_NAME: ${ISIS_ENV_NAME}
-        ASP_ENV_NAME: ${ASP_ENV_NAME}
+        BASE_ENV_NAME: ${ISIS_ENV_NAME}
+        ENV_NAME: ${ASP_ENV_NAME}
   
   jupyter-isis-asp-gispy:
     image: ${ISISASP_GISPY_IMAGE:-jupyter-isis-asp-gispy}
@@ -39,10 +39,9 @@ services:
       context: .
       dockerfile: isisaspgispy.dockerfile
       args:
-        BASE_IMAGE: ${ASP_IMAGE:-jupyter-isis-asp}        
-        ENV_NAME: ${GISPY_ENV_NAME}
-        ASP_ENV_NAME: ${ASP_ENV_NAME}
-        ISISASP_GISPY_ENV_NAME: ${ISISASP_GISPY_ENV_NAME}
+        BASE_IMAGE: ${ASP_IMAGE:-jupyter-isis-asp}                
+        BASE_ENV_NAME: ${ASP_ENV_NAME}
+        ENV_NAME: ${ISISASP_GISPY_ENV_NAME}
         
   jupyter-isis-asp340-gispy:
     image: ${ISISASP340_GISPY_IMAGE:-jupyter-isis-asp-gispy}
@@ -54,3 +53,54 @@ services:
         ENV_NAME: ${GISPY_ENV_NAME}
         ASP_ENV_NAME: ${ASP_ENV_NAME}
         ISISASP_GISPY_ENV_NAME: ${ISISASP_GISPY_ENV_NAME}
+  
+  jupyter-matisse:
+    image: ${MATISSE_IMAGE:-jupyter-matisse}
+    build:
+      context: .
+      dockerfile: matisse.dockerfile
+      args:
+        BASE_IMAGE: ${MATISSE_BASE_IMAGE:-quay.io/jupyter/scipy-notebook:ubuntu-24.04}
+        ENV_NAME: ${MATISSE_ENV_NAME}
+        BASE_ENV_NAME: ${MATISSE_ENV_NAME}
+
+  jupyter-matisse-gispy:
+    image: ${GISPY_MATISSE_IMAGE:-jupyter-matisse}
+    build:
+      context: .
+      dockerfile: matisse.dockerfile
+      args:
+        BASE_IMAGE: ${GISPY_IMAGE:-quay.io/jupyter/scipy-notebook}
+        ENV_NAME: ${MATISSE_ENV_NAME}
+        BASE_ENV_NAME: ${GISPY_ENV_NAME}
+
+  jupyter-fortran:
+    image: ${FORTRAN_IMAGE:-jupyter-gispy}
+    build:
+      context: .
+      dockerfile: fortran.dockerfile
+      args:
+        BASE_IMAGE: ${FORTRAN_BASE_IMAGE:-jupyter/scipy-notebook}
+        ENV_NAME: ${FORTRAN_ENV_NAME}
+  
+  jupyter-grass:
+    image: ${GRASS_IMAGE:-jupyter-grass}
+    build:
+      context: .
+      dockerfile: grass.dockerfile
+      args:
+        BASE_IMAGE: ${GRASS_BASE_IMAGE:-quay.io/jupyter/scipy-notebook:ubuntu-24.04}
+        ENV_NAME: ${GRASS_ENV_NAME}
+        BASE_ENV_NAME: ${GRASS_ENV_NAME}
+
+  jupyter-grass-gispy:
+    image: ${GISPY_GRASS_IMAGE:-jupyter-grass-gispy}
+    depends_on:
+      - jupyter-grass
+    build:
+      context: .
+      dockerfile: gispy.dockerfile
+      args:
+        BASE_IMAGE: ${GRASS_IMAGE:-jupyter-grass}
+        ENV_NAME: ${GRASS_ENV_NAME}
+

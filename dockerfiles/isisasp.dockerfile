@@ -21,11 +21,8 @@ RUN apt-get update -y                           && \
     apt-get autoremove
 
 USER $NB_UID
-
+SHELL ["/bin/bash", "-c"]
 ARG ASP_VERSION=""
-ARG ENV_NAME="isis"
-ARG ASP_ENV_NAME="isis-asp"
- 
 RUN conda config --set always_yes true            && \
     conda config --set use_only_tar_bz2 false      && \
     conda config --set notify_outdated_conda false && \
@@ -41,22 +38,31 @@ RUN conda config --set always_yes true            && \
     conda config --set auto_activate_base False && \
     conda clean -a
 
-RUN mamba create -n $ENV_NAME  && \     
-    source activate $ENV_NAME && \  
-    mamba install stereo-pipeline=${ASP_VERSION} && \     
+ARG ENV_NAME="isis-asp"
+ARG BASE_ENV_NAME="isis" 
+
+
+RUN source /opt/conda/etc/profile.d/conda.sh && \    
+    mamba create -n $ENV_NAME  && \     
+    conda activate $ENV_NAME && \  
+    mamba install stereo-pipeline=${ASP_VERSION} && \        
+    source activate --stack ${BASE_ENV_NAME} && \    
     pip install ipykernel && \
-    python -m ipykernel install --user --name $ASP_ENV_NAME --display-name $ASP_ENV_NAME && \
-    mamba clean -a   
+    python -m ipykernel install --user --name ${ENV_NAME} --display-name ${ENV_NAME} && \
+    mamba clean -a
 
-# Update .bashrc so that interactive shells auto-activate the custom environment
+# Update the .bashrc so that any interactive shell activates the stacked environments:
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> /home/$NB_USER/.bashrc && \
-    echo "conda activate $ENV_NAME" >> /home/$NB_USER/.bashrc
-
+    echo "conda activate ${ISIS_ENV_NAME} && conda activate --stack ${ENV_NAME}" >> /home/$NB_USER/.bashrc && \
+    sed -i '/conda activate ${BASE_ENV_NAME}/d' /home/$NB_USER/.bashrc
+    
 # Update PATH so that commands (like python) default to your custom environment
 ENV PATH /opt/conda/envs/$ENV_NAME/bin:$PATH
 
 # Ensure the new kernel is available in Jupyter
-RUN jupyter kernelspec list
+RUN jupyter kernelspec list 
+# && \
+#jupyter kernelspec uninstall ${BASE_ENV_NAME} -f
 
 # Set Environmental Variables for ISIS DATA
 ARG ISISDATA="/isis/data"
