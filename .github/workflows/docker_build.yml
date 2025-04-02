@@ -444,16 +444,28 @@ jobs:
 
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
-        run: |
-          NEW_IMAGE=$(docker compose config --images $SERVICE)
-          echo "$NEW_IMAGE"
-          docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
+          run: |
+            echo "Running: docker compose config --images $SERVICE"
+            OUTPUT=$(docker compose config --images $SERVICE)
+            echo "Full output:"
+            echo "$OUTPUT"
+            NEW_IMAGE=$(echo "$OUTPUT" | grep "$SERVICE" | head -n 1 | xargs)
+            echo "Extracted image for tagging: '$NEW_IMAGE'"
+            echo "Tagging image: '$NEW_IMAGE' as $REPO:$GITHUB_REF_NAME"
+            docker tag "$NEW_IMAGE" "$REPO:$GITHUB_REF_NAME"
 
-      - name: Tag Image as Latest and Versioned (Tag Event)
+      - name: Tag Image as Latest (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
-        run: |
-          NEW_IMAGE=$(docker compose config --images $SERVICE)
-          docker tag $NEW_IMAGE $REPO:latest
+          run: |
+            echo "Running: docker compose config --images $SERVICE"
+            OUTPUT=$(docker compose config --images $SERVICE)
+            echo "Full output:"
+            echo "$OUTPUT"
+            NEW_IMAGE=$(echo "$OUTPUT" | grep "$SERVICE" | head -n 1 | xargs)
+            echo "Extracted image for tagging: '$NEW_IMAGE'"
+            echo "Tagging image: '$NEW_IMAGE' as $REPO:latest"
+            docker tag "$NEW_IMAGE" "$REPO:latest"
+          
           
 
       - name: Login to Docker Hub
