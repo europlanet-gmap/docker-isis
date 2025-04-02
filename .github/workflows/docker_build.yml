@@ -445,14 +445,14 @@ jobs:
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
         run: |
-          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          NEW_IMAGE=$(docker compose config --images $SERVICE | head -n 1 | xargs)
           echo "Tagging image: '$NEW_IMAGE' as $REPO:$GITHUB_REF_NAME"
           docker tag "$NEW_IMAGE" "$REPO:$GITHUB_REF_NAME"
 
       - name: Tag Image as Latest and Versioned (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
         run: |
-          NEW_IMAGE=$(docker compose config --images $SERVICE)
+          NEW_IMAGE=$(docker compose config --images $SERVICE | head -n 1 | xargs)
           echo "Tagging image: '$NEW_IMAGE' as $REPO:latest"
           docker tag "$NEW_IMAGE" "$REPO:latest"
 
