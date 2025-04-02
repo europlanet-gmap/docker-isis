@@ -432,12 +432,12 @@ jobs:
         run: |
           set -a
           source .env
-          set +a          
-
+          set +a
+    
       - name: List Docker Images
         run: docker image ls -a
 
-      - name: Build GRASS-GISpy Image
+      - name: Build ISIS-ASP-GISPY Image
         run: |
           GRASS_IMAGE=${{ vars.DOCKERHUB_NAMESPACE }}/jupyter-grass:${GITHUB_REF_NAME}
           docker compose build --build-arg BASE_IMAGE=${GRASS_IMAGE} $SERVICE
@@ -446,15 +446,13 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
-          echo "Tagging image: '$NEW_IMAGE' as $REPO:$GITHUB_REF_NAME"
-          docker tag "$NEW_IMAGE" "$REPO:$GITHUB_REF_NAME"
+          docker tag $NEW_IMAGE $REPO:$GITHUB_REF_NAME
 
       - name: Tag Image as Latest and Versioned (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
         run: |
           NEW_IMAGE=$(docker compose config --images $SERVICE)
-          echo "Tagging image: '$NEW_IMAGE' as $REPO:latest"
-          docker tag "$NEW_IMAGE" "$REPO:latest"
+          docker tag $NEW_IMAGE $REPO:latest          
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -462,7 +460,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push GRASS-GISpy Image
+      - name: Push ISIS-ASP Image
         run: |
           docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
 

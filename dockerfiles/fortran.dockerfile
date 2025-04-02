@@ -10,7 +10,10 @@ RUN apt-get update -y && \
       bzip2 \
       ca-certificates \
       curl \
-      git \            
+      git \ 
+      gfortran \
+      gdb \
+      make           \
       libjpeg-dev \
       rsync \
       wget \
