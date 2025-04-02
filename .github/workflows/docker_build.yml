@@ -219,7 +219,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push ISIS-ASP-GISpy Image
+      - name: Push ISIS-ASP Image
         run: |
           docker image ls | tail -n+2 | awk '{print $1":"$2}' | grep "$REPO" | xargs -I'{}' docker push {}
 
@@ -432,8 +432,8 @@ jobs:
         run: |
           set -a
           source .env
-          set +a
-    
+          set +a          
+
       - name: List Docker Images
         run: docker image ls -a
 
@@ -444,29 +444,17 @@ jobs:
 
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
-          run: |
-            echo "Running: docker compose config --images $SERVICE"
-            OUTPUT=$(docker compose config --images $SERVICE)
-            echo "Full output:"
-            echo "$OUTPUT"
-            NEW_IMAGE=$(echo "$OUTPUT" | grep "$SERVICE" | head -n 1 | xargs)
-            echo "Extracted image for tagging: '$NEW_IMAGE'"
-            echo "Tagging image: '$NEW_IMAGE' as $REPO:$GITHUB_REF_NAME"
-            docker tag "$NEW_IMAGE" "$REPO:$GITHUB_REF_NAME"
+        run: |
+          NEW_IMAGE=$(docker compose config --images $SERVICE | head -n 1 | xargs)
+          echo "Tagging image: '$NEW_IMAGE' as $REPO:$GITHUB_REF_NAME"
+          docker tag "$NEW_IMAGE" "$REPO:$GITHUB_REF_NAME"
 
-      - name: Tag Image as Latest (Tag Event)
+      - name: Tag Image as Latest and Versioned (Tag Event)
         if: ${{ github.ref_type == 'tag' }}
-          run: |
-            echo "Running: docker compose config --images $SERVICE"
-            OUTPUT=$(docker compose config --images $SERVICE)
-            echo "Full output:"
-            echo "$OUTPUT"
-            NEW_IMAGE=$(echo "$OUTPUT" | grep "$SERVICE" | head -n 1 | xargs)
-            echo "Extracted image for tagging: '$NEW_IMAGE'"
-            echo "Tagging image: '$NEW_IMAGE' as $REPO:latest"
-            docker tag "$NEW_IMAGE" "$REPO:latest"
-          
-          
+        run: |
+          NEW_IMAGE=$(docker compose config --images $SERVICE | head -n 1 | xargs)
+          echo "Tagging image: '$NEW_IMAGE' as $REPO:latest"
+          docker tag "$NEW_IMAGE" "$REPO:latest"
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
