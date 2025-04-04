@@ -101,8 +101,9 @@ services:
       context: .
       dockerfile: gispy.dockerfile
       args:
-        BASE_IMAGE: ${GRASS_IMAGE:-jupyter-grass}
-        ENV_NAME: ${GRASS_ENV_NAME}
+        BASE_IMAGE: ${GISPY_GRASS_BASE_IMAGE:-jupyter-grass}
+        ENV_NAME: ${GISPY_GRASS_ENV_NAME}
+        BASE_ENV_NAME: ${GRASS_ENV_NAME}
 
   jupyter-jetset:
       image: ${JETSET_IMAGE:-jupyter-jetset}
