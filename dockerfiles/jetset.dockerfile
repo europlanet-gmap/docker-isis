@@ -10,12 +10,10 @@ RUN apt-get update -y && \
       bzip2 \
       ca-certificates \
       curl \
-      git \ 
-      gfortran \
-      gdb \
-      make           \
+      git \            
       libjpeg-dev \
       rsync \
+      swig \
       wget \
       vim && \
     rm -rf /var/lib/apt/lists/* && \
@@ -32,6 +30,9 @@ RUN conda config --set always_yes true            && \
     conda config --add create_default_packages ipykernel        && \
     conda config --add create_default_packages pip              && \
     conda config --add create_default_packages sh               && \
+    conda config --env --append channels defaults               && \
+    conda config --env --prepend channels astropy     && \
+    conda config --env --prepend channels andreatramacere     && \    
     # We disable the base conda env
     conda config --set auto_activate_base False && \
     conda clean -a
@@ -40,19 +41,17 @@ RUN conda config --set always_yes true            && \
 ENV USE_PYGEOS=0
 
 # Copy the environment.yml that has both conda and pip dependencies
-COPY fortran.txt /tmp/fortran.txt
+COPY jetset.txt /tmp/jetset.txt
 
-ARG ENV_NAME="fortran"
+ARG ENV_NAME="jetset"
 
 # Use mamba to update the base environment with all packages in environment.yml
-RUN mamba create -n $ENV_NAME && \    
+RUN mamba create -n $ENV_NAME python=3.10 && \    
     source activate $ENV_NAME && \
-    mamba install -y --file /tmp/fortran.txt      && \
+    mamba install -y --file /tmp/jetset.txt      && \
     pip install ipykernel && \
     python -m ipykernel install --user --name $ENV_NAME --display-name $ENV_NAME && \
     mamba clean -a    
-
-    # Install NAIF SPICE Toolkit
 
 # Update .bashrc so that interactive shells auto-activate the custom environment
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> /home/$NB_USER/.bashrc && \
@@ -63,25 +62,6 @@ ENV PATH /opt/conda/envs/$ENV_NAME/bin:$PATH
 
 # Ensure the new kernel is available in Jupyter
 RUN jupyter kernelspec list
-
-# Install csh and uncompress tools
-USER root
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends csh ncompress && \
-    rm -rf /var/lib/apt/lists/*
-
-# Set SPICE installation directory
-ENV SPICE_DIR="/home/jovyan/spice"
-
-# Download and install NAIF SPICE FORTRAN Toolkit using official method
-RUN mkdir -p $SPICE_DIR && \
-    curl -L -o /tmp/toolkit.tar.Z https://naif.jpl.nasa.gov/pub/naif/toolkit/FORTRAN/PC_Linux_gfortran_64bit/packages/toolkit.tar.Z && \
-    curl -L -o /tmp/importSpice.csh https://naif.jpl.nasa.gov/pub/naif/toolkit/FORTRAN/PC_Linux_gfortran_64bit/packages/importSpice.csh && \
-    chmod +x /tmp/importSpice.csh && \
-    cd $SPICE_DIR && \
-    /bin/csh -f /tmp/importSpice.csh && \
-    rm /tmp/toolkit.tar.Z /tmp/importSpice.csh
-
 
 # (Optional) If you need a readme:
 ENV README=$HOME/README.md
