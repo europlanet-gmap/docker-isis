@@ -445,7 +445,7 @@ jobs:
       - name: Tag Image (Push Event)
         if: ${{ github.event_name == 'push' }}
         run: |
-          NEW_IMAGE=$(docker compose config --images $SERVICE) # | head -n 1 | xargs)
+          NEW_IMAGE=$(docker compose config --images $SERVICE | head -n 1 | xargs)
           echo "Tagging image: '$NEW_IMAGE' as $REPO:$GITHUB_REF_NAME"
           docker tag "$NEW_IMAGE" "$REPO:$GITHUB_REF_NAME"
 
