@@ -108,7 +108,7 @@ services:
       image: ${JETSET_IMAGE:-jupyter-jetset}
       build:
         context: .
-        dockerfile: grass.dockerfile
+        dockerfile: jetset.dockerfile
         args:
           BASE_IMAGE: ${JETSET_BASE_IMAGE:-quay.io/jupyter/scipy-notebook:ubuntu-24.04}
           ENV_NAME: ${JETSET_ENV_NAME}
