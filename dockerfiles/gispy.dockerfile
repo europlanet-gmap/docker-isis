@@ -40,18 +40,23 @@ ENV USE_PYGEOS=0
 COPY gispy.txt /tmp/gispy.txt
 
 ARG ENV_NAME="gispy"
+ARG BASE_ENV_NAME="gispy"
 
 # Use mamba to update the base environment with all packages in environment.yml
 RUN mamba create -n $ENV_NAME && \    
     source activate $ENV_NAME && \
     mamba install -y --file /tmp/gispy.txt      && \
+    source activate  ${BASE_ENV_NAME} && \
+    source activate --stack ${ENV_NAME} && \ 
     pip install ipykernel && \
     python -m ipykernel install --user --name $ENV_NAME --display-name $ENV_NAME && \
-    mamba clean -a    
+    mamba clean -a   
+ 
 
-# Update .bashrc so that interactive shells auto-activate the custom environment
-RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> /home/$NB_USER/.bashrc && \
-    echo "conda activate $ENV_NAME" >> /home/$NB_USER/.bashrc
+# Update the .bashrc so that any interactive shell activates the stacked environments:
+    RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> /home/$NB_USER/.bashrc && \
+    echo "conda activate ${BASE_ENV_NAME} && conda activate --stack ${ENV_NAME}" >> /home/$NB_USER/.bashrc && \
+    sed -i '/conda activate gispy/d' /home/$NB_USER/.bashrc
 
 # Update PATH so that commands (like python) default to your custom environment
 ENV PATH /opt/conda/envs/$ENV_NAME/bin:$PATH
